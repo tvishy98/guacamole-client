@@ -28,12 +28,24 @@ import org.apache.guacamole.net.auth.credentials.CredentialsInfo;
 import org.apache.guacamole.net.auth.credentials.GuacamoleInvalidCredentialsException;
 import org.apache.guacamole.auth.header.user.AuthenticatedUser;
 import java.security.Principal;
+import com.google.api.client.json.webtoken.JsonWebToken;
+import com.google.auth.oauth2.TokenVerifier;
 
 /**
  * Service providing convenience functions for the HTTP Header
  * AuthenticationProvider implementation.
  */
 public class AuthenticationProviderService {
+
+    private static final String IAP_ISSUER_URL = "https://cloud.google.com/iap";
+    private static final String X_GOOGLE_JWT_HEADER = "x-goog-iap-jwt-assertion" ;
+
+    /**  
+     *  TODO : Read from config later.
+    **/
+    private static final String jwtValidationProjectID = "123" ;
+    private static final String jwtValidationBackendServiceID = "123" ; 
+
 
     /**
      * Service for retrieving header configuration information.
@@ -68,14 +80,27 @@ public class AuthenticationProviderService {
         // Pull HTTP header from request if present
         HttpServletRequest request = credentials.getRequest();
         if (request != null) {
+            // TODO : Check and handle if the result is a result.
+            String jwtToken = request.getHeader(X_GOOGLE_JWT_HEADER) ;
 
-            // Get the username from the header configured in guacamole.properties
-            String username = request.getHeader(confService.getHttpAuthHeader());
+            String expectedAudience = String.format("/projects/%s/global/backendServices/%s", 
 
-            if (username != null) {
-                AuthenticatedUser authenticatedUser = authenticatedUserProvider.get();
-                authenticatedUser.init(username, credentials);
-                return authenticatedUser;
+            if (jwtToken != null) {
+                TokenVerifier tokenVerifier = TokenVerifier.newBuilder().setAudience(expectedAudience).setIssuer(IAP_ISSUER_URL).build();
+
+                try {
+                    JsonWebToken jsonWebToken = tokenVerifier.verify(jwtToken);
+                    JsonWebToken.Payload payload = jsonWebToken.getPayload();
+                    String username = payload.get("email");
+
+                    AuthenticatedUser authenticatedUser = authenticatedUserProvider.get();
+                    authenticatedUser.init(username, credentials);
+                    return authenticatedUser;
+
+                } catch (TokenVerifier.VerificationException e) {
+                    // Authentication not provided via header, yet, so we request it.
+                    throw new GuacamoleInvalidCredentialsException("Invalid login.", CredentialsInfo.USERNAME_PASSWORD);
+                }
             }
 
         }
