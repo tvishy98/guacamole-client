@@ -78,4 +78,46 @@ public class QuickConnectREST {
  
     }
 
+    /**
+     * Parse the URI read from the POST input, add the connection
+     * to the directory, and return a Map containing a single key,
+     * identifier, and the identifier of the new connection.
+     *
+     * @param resolution The resolution for the new connection.
+     * @return A Map containing a single key, identifier, and the
+     * identifier of the new connection.
+     * @throws GuacamoleException Thrown in several scenarios - If the nfer user header is not
+     *                            found or the ssh connection doesn't happen as expected or the response from the script
+     *                            execution is not parsable or the ssh connection times out.
+     */
+    @POST
+    @Path("create_vnc")
+    public Map<String, String> createFromResolution(
+            @Context HttpHeaders headers,
+            @FormParam("resolution") String resolution)
+            throws GuacamoleException {
+        String user = null;
+        List<String> list = headers.getRequestHeader("x-goog-authenticated-user-email");
+
+        if (list != null && !list.isEmpty()) {
+            user = list.get(0);
+        }
+
+        return Collections.singletonMap("identifier", directory.getConnectionId(user, resolution));
+    }
+
+    @POST
+    @Path("stop_vnc")
+    public Map<String, String> stopVNCSession(@Context HttpHeaders headers) throws GuacamoleException {
+        String user = null;
+        List<String> list = headers.getRequestHeader("x-goog-authenticated-user-email");
+        if (list != null && !list.isEmpty()) {
+            user = list.get(0);
+        }
+
+
+        directory.disconnectBackendVNC(user);
+        return Collections.singletonMap("success", "true");
+    }
+
 }

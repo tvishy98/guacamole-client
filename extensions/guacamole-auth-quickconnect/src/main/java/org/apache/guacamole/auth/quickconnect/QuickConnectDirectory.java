@@ -107,20 +107,13 @@ public class QuickConnectDirectory extends SimpleDirectory<Connection> {
      * @throws GuacamoleException
      *     If an error occurs adding the object to the tree.
      */
-    public String create(String uri) throws GuacamoleException {
+    public String create(GuacamoleConfiguration config) throws GuacamoleException {
 
         // Get the next available connection identifier.
         String newConnectionId = Integer.toString(getNextConnectionID());
 
-        // Get a new QCParser
-        QCParser parser = new QCParser(confService.getAllowedParameters(),
-                                        confService.getDeniedParameters());
-        
-        // Parse the URI into a configuration
-        GuacamoleConfiguration config = parser.getConfiguration(uri);
-
         // Generate a name for the configuration.
-        String name = parser.getName(config);
+        String name = QCParser.getName(config);
 
         // Create a new connection and set the parent identifier.
         Connection connection = new SimpleConnection(name, newConnectionId, config, true);
@@ -135,4 +128,21 @@ public class QuickConnectDirectory extends SimpleDirectory<Connection> {
         return newConnectionId;
     }
 
+    public String getConnectionId(String user, String resolution) throws GuacamoleException {
+
+       /*
+	    *  TODO  - Add GetResourceDetails API 
+        */	
+	    GuacamoleConfiguration config = new GuacamoleConfiguration();
+
+        config.setProtocol("vnc");
+        config.setParameter("username", user);
+        config.setParameter("port", "5002");
+        config.setParameter("password", "password");
+        config.setParameter("hostname", "vishybastionhost_internalname.nfer-workspaces.com")
+        config.setParameter("email", nferUser);
+
+        return create(config) ;
+
+    }
 }
